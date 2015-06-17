@@ -54,12 +54,10 @@ namespace plivo{
         private:
             std::string trimRightSlash(std::string str);
 
-            std::shared_ptr<curlpp::Easy> basicRequest(std::string path);
-
             void postRequest(std::string path){
                 postRequest(path, std::list<StringPair>());}
 
-            void postRequest(std::string path, StringPairList data);
+            std::string postRequest(std::string path, StringPairList data);
 
             std::string listToJson(StringPairList data);
 

@@ -1,6 +1,8 @@
 #include "PlivoAPI.hpp"
 
 #include <algorithm>
+#include <iostream>
+#include <sstream>
 
 #include <curlpp/Options.hpp>
 #include <curlpp/Infos.hpp>
@@ -34,32 +36,33 @@ std::string plivo::PlivoAPI::trimRightSlash(std::string str){
     return str;
 }
 
-std::shared_ptr<curlpp::Easy> plivo::PlivoAPI::basicRequest(std::string path){
-    std::shared_ptr<curlpp::Easy> request;
+std::string plivo::PlivoAPI::postRequest(std::string path, plivo::PlivoAPI::StringPairList data){
+    curlpp::Easy request;
+    std::string json_data = listToJson(data);
     std::string basic_auth_credentials = auth_id_ + ":" + auth_token_;
     std::string request_url = api_ + "/" + trimRightSlash(path) + "/";
 
-    request->setOpt(new curlpp::options::Url(request_url));
-    request->setOpt(new curlpp::options::Port(80));
-    request->setOpt(new curlpp::options::UserAgent(user_agent_));
-    request->setOpt(new curlpp::options::HttpHeader(headers_));
-    request->setOpt(new curlpp::options::HttpAuth(CURLAUTH_BASIC));
-    request->setOpt(new curlpp::options::UserPwd(basic_auth_credentials));
-    // request->setOpt(new curlpp::options::Verbose(true));
-    // request->setOpt(new curlpp::options::SslVerifyPeer(false));
-
-    return request;
-}
-
-
-void plivo::PlivoAPI::postRequest(std::string path, plivo::PlivoAPI::StringPairList data){
     headers_.push_back("Content-Type: application/json");
 
-    std::shared_ptr<curlpp::Easy> request = basicRequest(path);
-    std::string json_data = listToJson(data);
+    request.setOpt(new curlpp::options::Url(request_url));
+    request.setOpt(new curlpp::options::Port(443));
+    request.setOpt(new curlpp::options::UserAgent(user_agent_));
+    request.setOpt(new curlpp::options::HttpHeader(headers_));
+    request.setOpt(new curlpp::options::HttpAuth(CURLAUTH_BASIC));
+    request.setOpt(new curlpp::options::UserPwd(basic_auth_credentials));
+    request.setOpt(new curlpp::options::Post(true));
+    request.setOpt(new curlpp::options::PostFields(json_data));
 
-    request->setOpt(new curlpp::options::Post(true));
-    request->setOpt(new curlpp::options::PostFields(json_data));
+    std::ostringstream os_stream;
+
+    try{
+        os_stream << request;
+    }catch(curlpp::LibcurlRuntimeError &e){
+        std::cout << "Error: " << e.what() << "\n";
+        return "";
+    }
+
+    return os_stream.str();
 }
 
 std::string  plivo::PlivoAPI::listToJson(plivo::PlivoAPI::StringPairList data){
@@ -90,5 +93,6 @@ void plivo::PlivoAPI::sendMessage(
     options.push_back({"dst",destination_number});
     options.push_back({"text",message});
 
-    postRequest("Message", options);
+    std::string response = postRequest("Message", options);
+    //std::cout << "Return:(\n" << response << ")\n";
 }
